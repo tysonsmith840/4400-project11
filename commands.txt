@@ -1,0 +1,154 @@
+/30 networks
+74.123.14.128/30 uplink 
+74.123.14.132/30 2800#1
+74.123.14.136/30 2800#2
+
+1)
+	on switch
+conf t
+router eigrp 12345
+eigrp router-id 74.123.14.152
+network 74.123.14.128 0.0.0.3
+network 74.123.14.132 0.0.0.3
+network 74.123.14.136 0.0.0.3
+
+	on 2800#1 
+conf t
+router eigrp 12345
+eigrp router-id 74.123.14.153
+network 74.123.14.132 0.0.0.3
+network 74.123.14.148 0.0.0.3
+
+	on 2800#2 
+conf t
+router eigrp 12345
+eigrp router-id 74.123.14.154
+network 74.123.14.136 0.0.0.3
+network 74.123.14.148 0.0.0.3
+
+
+2)
+	on switch
+conf t
+router eigrp 12345
+redistribute static
+redistribute connected
+exit
+
+int vl130
+ip summary-address eigrp 12345 74.123.14.128/27 
+ip hello-interval eigrp 12345 3
+ip hold-time eigrp 12345 9
+
+
+3)
+	on switch
+conf t
+ip routing
+router ospf 65535
+router-id 74.123.14.152
+network 74.123.14.128 0.0.0.3 area 0
+network 74.123.14.132 0.0.0.3 area 100
+network 74.123.14.136 0.0.0.3 area 100
+default-information originate
+redistribute connected metric 1 subnets
+redistribute static metric 1 subnets
+summary-address 74.123.14.128 255.255.255.224
+
+area 0 authentication message-digest
+area 100 authentication message-digest
+end
+
+conf t
+int vl130
+ip ospf message-digest-key 1 md5 ineedospftopass
+ip ospf network point-to-point
+end
+conf t
+int vl13
+ip ospf message-digest-key 2 md5 idlikeospftopass
+ip ospf network point-to-point
+exit
+int vl48
+ip ospf message-digest-key 2 md5 idlikeospftopass
+ip ospf network point-to-point
+
+
+	ip ospf 65535 point-to-point
+
+	on 2800#1
+
+conf t
+ip routing
+router ospf 65535
+router-id 74.123.14.153
+network 74.123.14.128 0.0.0.3 area 0
+network 74.123.14.132 0.0.0.3 area 100
+network 74.123.14.136 0.0.0.3 area 100
+redistribute connected metric 1 subnets
+redistribute static metric 1 subnets
+area 100 authentication message-digest
+exit
+
+int f0/0.13
+ip ospf 65535 area 100
+ip ospf message-digest-key 2 md5 idlikeospftopass
+ip ospf network point-to-point
+
+int f0/1.76
+ip ospf 65535 area 100
+ip ospf message-digest-key 2 md5 idlikeospftopass
+ip ospf network point-to-point
+
+	on 2800#2
+conf t
+ip routing
+router ospf 65535
+router-id 74.123.14.154
+network 74.123.14.128 0.0.0.3 area 0
+network 74.123.14.132 0.0.0.3 area 100
+network 74.123.14.136 0.0.0.3 area 100
+redistribute connected metric 1 subnets
+redistribute static metric 1 subnets
+area 100 authentication message-digest
+exit
+
+int f0/0.48
+ip ospf 65535 area 100
+ip ospf message-digest-key 2 md5 idlikeospftopass
+ip ospf network point-to-point
+
+
+int f0/1.76
+ip ospf 65535 area 100
+ip ospf message-digest-key 2 md5 idlikeospftopass
+ip ospf network point-to-point
+
+4)
+
+	on everything
+no router rip
+
+
+5)
+
+	on all devices
+conf t
+no ip http server
+no ip http secure-server
+
+
+	on switch
+conf t
+no interface Vlan930
+no vlan 930
+	
+
+	on routers
+conf t
+no int f0/1.930
+
+
+	passive-interface g0/21   something with vm's
+	passive-interface g0/22
+
